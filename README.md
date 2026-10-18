@@ -4,7 +4,7 @@ Duelos 1 contra 1 entre 35 películas, con estética de Friends, para armar un r
 
 - `app/src/engine.js`: el algoritmo. Tiene tres rondas: merge-insertion (Ford-Johnson, como máximo 136 duelos), verificación de vecinos (34) y dudas, hasta llegar a unos 200 duelos. Los empates se resuelven por transitividad.
 - `app/src/app.js`, `styles.css`, `index.html`: la interfaz, pensada para el celular.
-- `app/posters/`: los pósters recortados de las capturas de Letterboxd (`tools/crop_posters.py`).
+- `app/posters/`: pósters oficiales de TMDB (`tools/fetch_posters.py` los busca y baja en resolución original, `tools/resize_posters.py` los deja en 600×900).
 
 ```sh
 node app/build.mjs           # arma app/dist/index.html (autocontenido + pósters)
