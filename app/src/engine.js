@@ -172,17 +172,27 @@ const Engine = (() => {
   }
 
   // Estado completo a partir de las respuestas.
-  function plan(ids, state) {
+  // `fill(x, y)` es opcional: si las respuestas se acaban, se le pide una
+  // (r o null) y se agrega a state.answers. Sirve para rehacer la historia
+  // después de cambiar un duelo viejo sin volver a preguntar lo ya sabido.
+  function plan(ids, state, fill) {
     const answers = state.answers;
     const result = (phase, pair, extra) => ({ phase, pair, answered: i, ...extra });
     let i = 0;
+    const missing = ([x, y], phase) => {
+      if (i < answers.length) return false;
+      const r = fill ? fill(x, y, phase) : null;
+      if (r === null || r === undefined) return true;
+      answers.push([x, y, r]);
+      return false;
+    };
 
     // Ronda 1
     const gen = mergeInsertion(shuffle(ids, state.seed));
     let step = gen.next();
     while (!step.done) {
       const [x, y] = step.value;
-      if (i >= answers.length) return result(1, [x, y], { round: { done: i, total: null } });
+      if (missing([x, y], 1)) return result(1, [x, y], { round: { done: i, total: null } });
       const r = orient(answers[i], x, y);
       if (r === null) return result(1, [x, y], { truncateTo: i, round: { done: i, total: null } });
       step = gen.next(r);
@@ -200,7 +210,7 @@ const Engine = (() => {
       if (k >= order.length - 1) break;
       const pair = [order[k], order[k + 1]];
       const info = { p1, slots: [k, k + 1], round: { done: i - p1, total: ids.length - 1 } };
-      if (i >= answers.length) return result(2, pair, info);
+      if (missing(pair, 2)) return result(2, pair, info);
       const r = orient(answers[i], pair[0], pair[1]);
       if (r === null) return result(2, pair, { ...info, truncateTo: i });
       asked2.add(key(pair[0], pair[1]));
@@ -220,7 +230,7 @@ const Engine = (() => {
       if (!doubt) break;
       const { pair, slots } = doubt;
       const info = { p1, p2, slots, round: { done: n3, total: budget } };
-      if (i >= answers.length) return result(3, pair, info);
+      if (missing(pair, 3)) return result(3, pair, info);
       const r = orient(answers[i], pair[0], pair[1]);
       if (r === null) return result(3, pair, { ...info, truncateTo: i });
       asked3.add(key(pair[0], pair[1]));
@@ -257,7 +267,58 @@ const Engine = (() => {
     return Math.max(TARGET, p.answered + 1);
   }
 
-  return { plan, estimateTotal, mergeInsertion, TARGET, key };
+  // Cambia la respuesta `index` y rehace todo lo que vino después.
+  // Reutiliza cada respuesta vieja cuyo par vuelva a aparecer y, en la
+  // ronda 1, también lo que se deduce de tus otras respuestas (A>B y B>C
+  // ⇒ A>C). Las rondas 2 y 3 verifican, así que ahí solo vale lo directo.
+  function rewrite(ids, state, index, r) {
+    const old = state.answers;
+    const [x, y] = old[index];
+    const memo = new Map();
+    for (const [a, b, rr] of old.slice(index + 1)) {
+      const k = key(a, b);
+      if (!memo.has(k)) memo.set(k, []);
+      memo.get(k).push(a < b ? rr : -rr);
+    }
+    const known = old.filter((_, i) => i !== index).concat([[x, y, r]]);
+    const idx = new Map(ids.map((id, i) => [id, i]));
+    const n = ids.length;
+    const reach = Array.from({ length: n }, () => new Array(n).fill(false));
+    for (const [a, b, rr] of known) {
+      if (rr > 0) reach[idx.get(a)][idx.get(b)] = true;
+      if (rr < 0) reach[idx.get(b)][idx.get(a)] = true;
+    }
+    for (let k = 0; k < n; k++)
+      for (let i = 0; i < n; i++)
+        if (reach[i][k]) for (let j = 0; j < n; j++) if (reach[k][j]) reach[i][j] = true;
+
+    state.answers = old.slice(0, index).concat([[x, y, r]]);
+    let reused = 0;
+    const p = plan(ids, state, (a, b, phase) => {
+      const q = memo.get(key(a, b));
+      if (q && q.length) {
+        reused++;
+        const v = q.shift();
+        return a < b ? v : -v;
+      }
+      if (phase !== 1) return null;
+      const ab = reach[idx.get(a)][idx.get(b)];
+      const ba = reach[idx.get(b)][idx.get(a)];
+      if (ab === ba) return null;
+      reused++;
+      return ab ? 1 : -1;
+    });
+    return { plan: p, reused, dropped: old.length - index - 1 - reused };
+  }
+
+  // A qué ronda pertenece cada respuesta.
+  function roundsOf(p, count) {
+    return Array.from({ length: count }, (_, i) =>
+      p.phase === 1 || i < p.p1 ? 1 : p.phase === 2 || i < p.p1 + p.p2 ? 2 : 3
+    );
+  }
+
+  return { plan, rewrite, roundsOf, estimateTotal, mergeInsertion, TARGET, key };
 })();
 
 if (typeof module !== "undefined") module.exports = Engine;

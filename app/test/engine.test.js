@@ -84,3 +84,33 @@ console.log("ok ruido 5%, peor desplazamiento", worst, "ms/simulación", (Date.n
   }
   console.log("ok deshacer");
 }
+// 6. Cambiar un duelo viejo: se reutiliza lo ya respondido y el orden se corrige
+{
+  const truth = ids.slice().sort((a, b) => ((a * 37) % 35) - ((b * 37) % 35));
+  const pos = new Map(truth.map((id, i) => [id, i]));
+  const truthR = (x, y) => (pos.get(x) < pos.get(y) ? 1 : -1);
+  const state = { seed: 9, answers: [] };
+  let p;
+  for (;;) {
+    p = Engine.plan(ids, state);
+    if (p.phase === "done") break;
+    const [x, y] = p.pair;
+    // se equivoca en el duelo 40
+    state.answers.push([x, y, state.answers.length === 40 ? -truthR(x, y) : truthR(x, y)]);
+  }
+  const [x, y] = state.answers[40];
+  const res = Engine.rewrite(ids, state, 40, truthR(x, y));
+  let asked = 0;
+  p = res.plan;
+  while (p.phase !== "done") {
+    const [a, b] = p.pair;
+    state.answers.push([a, b, truthR(a, b)]);
+    asked++;
+    p = Engine.plan(ids, state);
+  }
+  assert.deepStrictEqual(p.order, truth, "orden exacto después de corregir");
+  console.log(`ok cambiar duelo 40: reutilizadas ${res.reused}, descartadas ${res.dropped}, nuevas ${asked}`);
+  const rounds = Engine.roundsOf(p, state.answers.length);
+  assert.strictEqual(rounds[0], 1);
+  assert.strictEqual(rounds[state.answers.length - 1], 3);
+}

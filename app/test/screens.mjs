@@ -26,19 +26,19 @@ const shot = (n) => page.screenshot({ path: join(OUT, n + ".png") });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // respuestas de un "usuario" con gustos parecidos a su lista de Letterboxd
-async function seed(count, revealed = false) {
-  await page.evaluate(([count, revealed]) => {
+async function seed(count, revealed = false, untilPhase = 0) {
+  await page.evaluate(([count, revealed, untilPhase]) => {
     const taste = new Map(MOVIES.map((m) => [m.id, m.id + ((m.id * 7919) % 11) - 5]));
     const s = { seed: 12345, answers: [], extra: 0, revealed, updatedAt: Date.now() };
     for (let i = 0; i < count; i++) {
       const p = Engine.plan(IDS, s);
-      if (p.phase === "done") break;
+      if (p.phase === "done" || (untilPhase && p.phase === untilPhase && p.round.done >= 3)) break;
       const [x, y] = p.pair;
       const d = taste.get(y) - taste.get(x);
       s.answers.push([x, y, Math.abs(d) < 0.5 ? 0 : d > 0 ? 1 : -1]);
     }
     localStorage.setItem("pelisale-top35-v1", JSON.stringify({ ...s, answers: s.answers.map((a) => a.join(",")).join(";") }));
-  }, [count, revealed]);
+  }, [count, revealed, untilPhase]);
   await page.reload();
 }
 
@@ -63,10 +63,21 @@ await seed(140);
 await page.click("#startBtn");
 await sleep(800);
 await shot("06-ronda2");
-await seed(185);
+await seed(400, false, 3);
 await page.click("#startBtn");
 await sleep(800);
 await shot("07-ronda3");
+await page.click("#historyBtn");
+await sleep(400);
+await shot("07b-historial");
+await page.click('.hrow[data-i="40"]');
+await sleep(800);
+await shot("07c-editar");
+const before = await page.evaluate(() => state.answers.length);
+await page.click(await page.isVisible("#pickL .mine:not([hidden])") ? "#pickR" : "#pickL");
+await sleep(900);
+await shot("07d-despues");
+console.log("cambio duelo 41:", before, "respuestas →", await page.evaluate(() => state.answers.length), "| pantalla:", await page.evaluate(() => screen), "| editando:", await page.evaluate(() => editIndex));
 
 await seed(400);
 await page.evaluate(() => {

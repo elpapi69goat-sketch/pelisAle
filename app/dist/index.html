@@ -417,6 +417,92 @@ img { display: block; }
   pointer-events: none;
 }
 .toast.show { transform: translate(-50%, 0); opacity: 1; }
+.toast.info { font-family: var(--body); font-size: 15px; font-weight: 600; white-space: normal; text-align: center; border-radius: 16px; width: max-content; }
+
+/* ---------- historial y edición ---------- */
+.top-actions { display: flex; gap: 8px; }
+.top-actions .undo { padding: 0 12px; }
+.editbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 16px;
+  font-size: 15px;
+  background: rgba(220, 174, 85, 0.14);
+  box-shadow: inset 0 0 0 1.5px rgba(220, 174, 85, 0.5);
+}
+.editbar b { color: var(--gold-hi); }
+.pick .mine {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--gold);
+  color: var(--ink);
+}
+.tie-btn.chosen { box-shadow: inset 0 0 0 2px var(--gold); }
+.tie-btn.chosen small::after { content: " · tu elección"; color: var(--gold-hi); }
+
+.history {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--wall);
+  padding: 0 max(16px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  animation: fadeIn 0.2s ease both;
+}
+.history-in { max-width: 560px; margin: 0 auto; }
+.history-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 0 12px;
+  background: var(--wall);
+  box-shadow: 0 1px 0 var(--line);
+}
+.history-head .row1 { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.history-head h2 { font-family: var(--display); font-weight: 800; font-size: 26px; }
+.history-head p { font-size: 14px; color: var(--muted); text-wrap: balance; }
+.hist-round { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; display: flex; align-items: center; gap: 8px; }
+.hist-round i { width: 8px; height: 8px; border-radius: 50%; background: var(--dot-red); }
+.hist-round.r2 i { background: var(--dot-yellow); }
+.hist-round.r3 i { background: var(--dot-blue); }
+.hist-list { display: grid; gap: 8px; }
+.hrow {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 26px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px 8px 6px;
+  border-radius: 14px;
+  background: rgba(248, 238, 221, 0.05);
+  text-align: left;
+  transition: background 0.15s;
+}
+.hrow:active { background: rgba(248, 238, 221, 0.12); }
+.hrow .n { font-family: var(--display); font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--muted); text-align: right; }
+.hside { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hside.right { flex-direction: row-reverse; text-align: right; }
+.hside img { flex: none; width: 32px; height: 48px; object-fit: cover; border-radius: 4px; }
+.hside span { min-width: 0; font-size: 13px; font-weight: 600; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.hside.won img { box-shadow: 0 0 0 2px var(--gold-hi); }
+.hside.won span { color: var(--gold-hi); }
+.hside.lost { opacity: 0.42; }
+.hrow .mid { font-family: var(--hand); font-size: 19px; color: var(--faint); text-align: center; }
+.hrow .mid.tie { color: var(--gold-hi); }
 
 /* ================= CARTEL DE EPISODIO ================= */
 .titlecard {
@@ -697,12 +783,22 @@ img { display: block; }
   <section id="duel" class="screen" hidden>
     <div class="topbar">
       <span class="logo" aria-hidden="true">P<i></i>E<i></i>L<i></i>I<i></i>S</span>
-      <button id="undoBtn" class="undo" aria-label="Deshacer el último duelo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
-        Deshacer
-      </button>
+      <div class="top-actions">
+        <button id="historyBtn" class="undo" aria-label="Ver y cambiar duelos anteriores">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
+          Historial
+        </button>
+        <button id="undoBtn" class="undo" aria-label="Deshacer el último duelo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+          Deshacer
+        </button>
+      </div>
     </div>
-    <div class="progress">
+    <div id="editBar" class="editbar" hidden>
+      <span>Cambiando el <b id="editLabel">duelo 1</b></span>
+      <button id="editCancel" class="btn small ghost">Cancelar</button>
+    </div>
+    <div class="progress" id="progress">
       <div class="progress-row"><span id="roundLabel" class="round-label">Ronda 1 · Ordenar</span><span id="countLabel" class="count">Duelo 1 · faltan ~199</span></div>
       <div class="bars"><div class="bar"><span id="bar1"></span></div><div class="bar"><span id="bar2"></span></div><div class="bar"><span id="bar3"></span></div></div>
     </div>
@@ -710,13 +806,13 @@ img { display: block; }
     <div id="chalk" class="chalk"></div>
     <div id="arena" class="arena">
       <button class="pick" data-side="L" id="pickL">
-        <div class="poster"><img alt=""><span class="yr"></span></div>
+        <div class="poster"><img alt=""><span class="yr"></span><span class="mine" hidden>Tu elección</span></div>
         <div class="ttl"></div>
         <span class="heart">¡ESTA!</span>
       </button>
       <div class="vs" aria-hidden="true">vs</div>
       <button class="pick" data-side="R" id="pickR">
-        <div class="poster"><img alt=""><span class="yr"></span></div>
+        <div class="poster"><img alt=""><span class="yr"></span><span class="mine" hidden>Tu elección</span></div>
         <div class="ttl"></div>
         <span class="heart">¡ESTA!</span>
       </button>
@@ -734,6 +830,7 @@ img { display: block; }
 <section id="titlecard" class="titlecard" hidden></section>
 <section id="reveal" hidden><button id="skipBtn" class="skip">Saltar</button><div id="stage" class="stage"></div></section>
 <section id="sheet" class="sheet" hidden></section>
+<section id="history" class="history" hidden></section>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <canvas id="confetti" aria-hidden="true"></canvas>
 
@@ -957,17 +1054,27 @@ const Engine = (() => {
   }
 
   // Estado completo a partir de las respuestas.
-  function plan(ids, state) {
+  // `fill(x, y)` es opcional: si las respuestas se acaban, se le pide una
+  // (r o null) y se agrega a state.answers. Sirve para rehacer la historia
+  // después de cambiar un duelo viejo sin volver a preguntar lo ya sabido.
+  function plan(ids, state, fill) {
     const answers = state.answers;
     const result = (phase, pair, extra) => ({ phase, pair, answered: i, ...extra });
     let i = 0;
+    const missing = ([x, y], phase) => {
+      if (i < answers.length) return false;
+      const r = fill ? fill(x, y, phase) : null;
+      if (r === null || r === undefined) return true;
+      answers.push([x, y, r]);
+      return false;
+    };
 
     // Ronda 1
     const gen = mergeInsertion(shuffle(ids, state.seed));
     let step = gen.next();
     while (!step.done) {
       const [x, y] = step.value;
-      if (i >= answers.length) return result(1, [x, y], { round: { done: i, total: null } });
+      if (missing([x, y], 1)) return result(1, [x, y], { round: { done: i, total: null } });
       const r = orient(answers[i], x, y);
       if (r === null) return result(1, [x, y], { truncateTo: i, round: { done: i, total: null } });
       step = gen.next(r);
@@ -985,7 +1092,7 @@ const Engine = (() => {
       if (k >= order.length - 1) break;
       const pair = [order[k], order[k + 1]];
       const info = { p1, slots: [k, k + 1], round: { done: i - p1, total: ids.length - 1 } };
-      if (i >= answers.length) return result(2, pair, info);
+      if (missing(pair, 2)) return result(2, pair, info);
       const r = orient(answers[i], pair[0], pair[1]);
       if (r === null) return result(2, pair, { ...info, truncateTo: i });
       asked2.add(key(pair[0], pair[1]));
@@ -1005,7 +1112,7 @@ const Engine = (() => {
       if (!doubt) break;
       const { pair, slots } = doubt;
       const info = { p1, p2, slots, round: { done: n3, total: budget } };
-      if (i >= answers.length) return result(3, pair, info);
+      if (missing(pair, 3)) return result(3, pair, info);
       const r = orient(answers[i], pair[0], pair[1]);
       if (r === null) return result(3, pair, { ...info, truncateTo: i });
       asked3.add(key(pair[0], pair[1]));
@@ -1042,7 +1149,58 @@ const Engine = (() => {
     return Math.max(TARGET, p.answered + 1);
   }
 
-  return { plan, estimateTotal, mergeInsertion, TARGET, key };
+  // Cambia la respuesta `index` y rehace todo lo que vino después.
+  // Reutiliza cada respuesta vieja cuyo par vuelva a aparecer y, en la
+  // ronda 1, también lo que se deduce de tus otras respuestas (A>B y B>C
+  // ⇒ A>C). Las rondas 2 y 3 verifican, así que ahí solo vale lo directo.
+  function rewrite(ids, state, index, r) {
+    const old = state.answers;
+    const [x, y] = old[index];
+    const memo = new Map();
+    for (const [a, b, rr] of old.slice(index + 1)) {
+      const k = key(a, b);
+      if (!memo.has(k)) memo.set(k, []);
+      memo.get(k).push(a < b ? rr : -rr);
+    }
+    const known = old.filter((_, i) => i !== index).concat([[x, y, r]]);
+    const idx = new Map(ids.map((id, i) => [id, i]));
+    const n = ids.length;
+    const reach = Array.from({ length: n }, () => new Array(n).fill(false));
+    for (const [a, b, rr] of known) {
+      if (rr > 0) reach[idx.get(a)][idx.get(b)] = true;
+      if (rr < 0) reach[idx.get(b)][idx.get(a)] = true;
+    }
+    for (let k = 0; k < n; k++)
+      for (let i = 0; i < n; i++)
+        if (reach[i][k]) for (let j = 0; j < n; j++) if (reach[k][j]) reach[i][j] = true;
+
+    state.answers = old.slice(0, index).concat([[x, y, r]]);
+    let reused = 0;
+    const p = plan(ids, state, (a, b, phase) => {
+      const q = memo.get(key(a, b));
+      if (q && q.length) {
+        reused++;
+        const v = q.shift();
+        return a < b ? v : -v;
+      }
+      if (phase !== 1) return null;
+      const ab = reach[idx.get(a)][idx.get(b)];
+      const ba = reach[idx.get(b)][idx.get(a)];
+      if (ab === ba) return null;
+      reused++;
+      return ab ? 1 : -1;
+    });
+    return { plan: p, reused, dropped: old.length - index - 1 - reused };
+  }
+
+  // A qué ronda pertenece cada respuesta.
+  function roundsOf(p, count) {
+    return Array.from({ length: count }, (_, i) =>
+      p.phase === 1 || i < p.p1 ? 1 : p.phase === 2 || i < p.p1 + p.p2 ? 2 : 3
+    );
+  }
+
+  return { plan, rewrite, roundsOf, estimateTotal, mergeInsertion, TARGET, key };
 })();
 
 if (typeof module !== "undefined") module.exports = Engine;
@@ -1133,10 +1291,12 @@ function show(id) {
 let toastTimer = 0;
 function toast(text) {
   const t = $("#toast");
+  const info = text.length > 30;
   t.textContent = text;
+  t.classList.toggle("info", info);
   t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 1900);
+  toastTimer = setTimeout(() => t.classList.remove("show"), info ? 3200 : 1900);
 }
 
 let wakeLock = null;
@@ -1230,6 +1390,7 @@ function sideFlip(p) {
 
 function fillCard(el, m) {
   el.classList.remove("win", "lose", "tie");
+  el.querySelector(".mine").hidden = true;
   const img = el.querySelector("img");
   img.src = m.poster;
   img.alt = `Póster de ${m.title}`;
@@ -1255,6 +1416,7 @@ function updateHeader(p) {
 }
 
 function fillDuel(p) {
+  setEditing(null);
   const [x, y] = p.pair;
   const flip = sideFlip(p);
   cur = { x, y, L: flip ? y : x, R: flip ? x : y };
@@ -1300,10 +1462,11 @@ const MILESTONES = {
 };
 
 async function answer(side) {
-  if (busy || !cur || screen !== "duel" || !$("#titlecard").hidden || !$("#reveal").hidden) return;
+  if (busy || !cur || screen !== "duel" || !$("#titlecard").hidden || !$("#reveal").hidden || !$("#history").hidden) return;
   busy = true;
   const winner = side === "L" ? cur.L : side === "R" ? cur.R : null;
   const r = winner === null ? 0 : winner === cur.x ? 1 : -1;
+  if (editIndex !== null) return applyEdit(side, r);
   state.answers.push([cur.x, cur.y, r]);
   save();
 
@@ -1326,7 +1489,7 @@ async function answer(side) {
 }
 
 function undo() {
-  if (busy || !state.answers.length) return;
+  if (busy || !state.answers.length || editIndex !== null) return;
   state.answers.pop();
   save();
   const p = Engine.plan(IDS, state);
@@ -1344,6 +1507,8 @@ $("#pickL").addEventListener("click", () => answer("L"));
 $("#pickR").addEventListener("click", () => answer("R"));
 $("#tieBtn").addEventListener("click", () => answer("T"));
 $("#undoBtn").addEventListener("click", undo);
+$("#historyBtn").addEventListener("click", openHistory);
+$("#editCancel").addEventListener("click", cancelEdit);
 document.addEventListener("keydown", (e) => {
   if (screen !== "duel" || e.metaKey || e.ctrlKey) return;
   if (!$("#titlecard").hidden) {
@@ -1355,9 +1520,139 @@ document.addEventListener("keydown", (e) => {
   else if (k === "arrowright") answer("R");
   else if (k === "arrowdown") answer("T");
   else if (k === "z" || k === "backspace") undo();
+  else if (k === "escape" && editIndex !== null) cancelEdit();
   else return;
   e.preventDefault();
 });
+
+// ---------------------------------------------------------------- historial: volver a un duelo y cambiarlo
+
+let editIndex = null;
+
+function setEditing(index) {
+  editIndex = index;
+  $("#editBar").hidden = index === null;
+  $("#progress").hidden = index !== null;
+  $("#tieBtn").classList.remove("chosen");
+  $("#undoBtn").disabled = index !== null || state.answers.length === 0;
+  if (index !== null) {
+    $("#editLabel").textContent = `duelo ${index + 1}`;
+    $("#chalk").textContent = "Elegí de nuevo. Después seguís desde donde te toca.";
+  }
+}
+
+function roundsNow() {
+  return Engine.roundsOf(Engine.plan(IDS, state), state.answers.length);
+}
+
+function openHistory() {
+  if (busy || !state.answers.length) return toast("Todavía no hay duelos");
+  const rounds = roundsNow();
+  const names = { 1: "Ronda 1 · Ordenar", 2: "Ronda 2 · Verificar", 3: "Ronda 3 · Dudas" };
+  const side = (id, cls) => {
+    const m = BY_ID.get(id);
+    return `<span class="hside ${cls}"><img src="${m.poster}" alt=""><span>${esc(m.title)}</span></span>`;
+  };
+  let html = "";
+  let lastRound = 0;
+  // del más nuevo al más viejo, agrupado por ronda
+  for (let i = state.answers.length - 1; i >= 0; i--) {
+    const [x, y, r] = state.answers[i];
+    if (rounds[i] !== lastRound) {
+      if (lastRound) html += `</div>`;
+      lastRound = rounds[i];
+      html += `<div class="hist-round r${lastRound}"><i></i>${names[lastRound]}</div><div class="hist-list">`;
+    }
+    const flip = sideFlip({ answered: i });
+    const [L, R] = flip ? [y, x] : [x, y];
+    const winner = r === 0 ? null : r > 0 ? x : y;
+    const cls = (id) => (winner === null ? "" : winner === id ? "won" : "lost");
+    html += `<button class="hrow" data-i="${i}" aria-label="Cambiar el duelo ${i + 1}">
+      <span class="n">${i + 1}</span>${side(L, cls(L))}<span class="mid ${r === 0 ? "tie" : ""}">${r === 0 ? "≈" : "vs"}</span>${side(R, cls(R) + " right")}</button>`;
+  }
+  html += `</div>`;
+  const h = $("#history");
+  h.innerHTML = `<div class="history-in">
+    <header class="history-head">
+      <div class="row1"><h2>Historial</h2><button class="btn small ghost" id="histClose">Cerrar</button></div>
+      <p>${state.answers.length} duelos. Tocá uno para cambiar tu elección; después seguís desde donde te toque.</p>
+    </header>${html}</div>`;
+  h.hidden = false;
+  h.scrollTop = 0;
+  document.body.style.overflow = "hidden";
+  $("#histClose").addEventListener("click", closeHistory);
+  h.querySelectorAll(".hrow").forEach((b) => b.addEventListener("click", () => {
+    closeHistory();
+    enterEdit(Number(b.dataset.i));
+  }));
+}
+
+function closeHistory() {
+  $("#history").hidden = true;
+  document.body.style.overflow = "";
+}
+
+function enterEdit(index) {
+  const [x, y, r] = state.answers[index];
+  if (screen !== "duel") {
+    show("duel");
+    keepAwake();
+  }
+  const flip = sideFlip({ answered: index });
+  cur = { x, y, L: flip ? y : x, R: flip ? x : y };
+  fillCard($("#pickL"), BY_ID.get(cur.L));
+  fillCard($("#pickR"), BY_ID.get(cur.R));
+  setEditing(index);
+  if (r === 0) $("#tieBtn").classList.add("chosen");
+  else $(r > 0 === (cur.L === x) ? "#pickL" : "#pickR").querySelector(".mine").hidden = false;
+  dealIn();
+}
+
+function cancelEdit() {
+  if (busy) return;
+  const p = Engine.plan(IDS, state);
+  if (p.phase === "done") {
+    setEditing(null);
+    return showFinal(p, false);
+  }
+  lastPhase = p.phase;
+  fillDuel(p);
+  dealIn();
+}
+
+async function applyEdit(side, r) {
+  const index = editIndex;
+  const L = $("#pickL");
+  const R = $("#pickR");
+  if (side === "T") { L.classList.add("tie"); R.classList.add("tie"); }
+  else { (side === "L" ? L : R).classList.add("win"); (side === "L" ? R : L).classList.add("lose"); }
+
+  let p;
+  let msg;
+  if (state.answers[index][2] === r) {
+    p = Engine.plan(IDS, state);
+    msg = "Sin cambios: era la misma elección";
+  } else {
+    const res = Engine.rewrite(IDS, state, index, r);
+    save();
+    p = res.plan;
+    const left = p.phase === "done" ? 0 : Engine.estimateTotal(p) - p.answered;
+    msg = p.phase === "done" ? "Cambiado · ranking actualizado" : res.reused ? `Cambiado · ${res.reused} respuestas reutilizadas` : "Cambiado";
+    if (p.phase !== "done" && left > 0) msg += ` · faltan ${left}`;
+  }
+  await wait(380);
+  $("#arena").classList.add("out");
+  await wait(250);
+  setEditing(null);
+  toast(msg);
+  if (p.phase === "done" && state.revealed) {
+    busy = false;
+    cur = null;
+    return showFinal(p, false);
+  }
+  lastPhase = p.phase;
+  proceed(p, true);
+}
 
 // ---------------------------------------------------------------- confeti (los puntitos del logo)
 
@@ -1583,7 +1878,7 @@ function showFinal(p, celebrate) {
       <button class="btn ghost" id="copyBtn">Copiar el ranking como texto</button>
       <button class="btn ghost" id="moreBtn">Hacer 10 duelos más de desempate</button>
       <button class="btn ghost" id="replayBtn">Ver la revelación otra vez</button>
-      <button class="btn ghost" id="undoLastBtn">Deshacer el último duelo</button>
+      <button class="btn ghost" id="histFinalBtn">Revisar o cambiar duelos</button>
       <button class="linkish" id="finalReset">Empezar de cero</button>
       <div id="finalConfirm" class="confirm" hidden>
         <span>¿Borrar todos los duelos y el ranking?</span>
@@ -1616,7 +1911,7 @@ function showFinal(p, celebrate) {
     proceed(np, true);
   });
   $("#replayBtn").addEventListener("click", () => playReveal(p).then(() => window.scrollTo(0, 0)));
-  $("#undoLastBtn").addEventListener("click", undo);
+  $("#histFinalBtn").addEventListener("click", openHistory);
   $("#finalReset").addEventListener("click", () => { $("#finalReset").hidden = true; $("#finalConfirm").hidden = false; });
   $("#finalResetNo").addEventListener("click", () => { $("#finalReset").hidden = false; $("#finalConfirm").hidden = true; });
   $("#finalResetYes").addEventListener("click", () => {

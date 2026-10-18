@@ -83,10 +83,12 @@ function show(id) {
 let toastTimer = 0;
 function toast(text) {
   const t = $("#toast");
+  const info = text.length > 30;
   t.textContent = text;
+  t.classList.toggle("info", info);
   t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 1900);
+  toastTimer = setTimeout(() => t.classList.remove("show"), info ? 3200 : 1900);
 }
 
 let wakeLock = null;
@@ -180,6 +182,7 @@ function sideFlip(p) {
 
 function fillCard(el, m) {
   el.classList.remove("win", "lose", "tie");
+  el.querySelector(".mine").hidden = true;
   const img = el.querySelector("img");
   img.src = m.poster;
   img.alt = `Póster de ${m.title}`;
@@ -205,6 +208,7 @@ function updateHeader(p) {
 }
 
 function fillDuel(p) {
+  setEditing(null);
   const [x, y] = p.pair;
   const flip = sideFlip(p);
   cur = { x, y, L: flip ? y : x, R: flip ? x : y };
@@ -250,10 +254,11 @@ const MILESTONES = {
 };
 
 async function answer(side) {
-  if (busy || !cur || screen !== "duel" || !$("#titlecard").hidden || !$("#reveal").hidden) return;
+  if (busy || !cur || screen !== "duel" || !$("#titlecard").hidden || !$("#reveal").hidden || !$("#history").hidden) return;
   busy = true;
   const winner = side === "L" ? cur.L : side === "R" ? cur.R : null;
   const r = winner === null ? 0 : winner === cur.x ? 1 : -1;
+  if (editIndex !== null) return applyEdit(side, r);
   state.answers.push([cur.x, cur.y, r]);
   save();
 
@@ -276,7 +281,7 @@ async function answer(side) {
 }
 
 function undo() {
-  if (busy || !state.answers.length) return;
+  if (busy || !state.answers.length || editIndex !== null) return;
   state.answers.pop();
   save();
   const p = Engine.plan(IDS, state);
@@ -294,6 +299,8 @@ $("#pickL").addEventListener("click", () => answer("L"));
 $("#pickR").addEventListener("click", () => answer("R"));
 $("#tieBtn").addEventListener("click", () => answer("T"));
 $("#undoBtn").addEventListener("click", undo);
+$("#historyBtn").addEventListener("click", openHistory);
+$("#editCancel").addEventListener("click", cancelEdit);
 document.addEventListener("keydown", (e) => {
   if (screen !== "duel" || e.metaKey || e.ctrlKey) return;
   if (!$("#titlecard").hidden) {
@@ -305,9 +312,139 @@ document.addEventListener("keydown", (e) => {
   else if (k === "arrowright") answer("R");
   else if (k === "arrowdown") answer("T");
   else if (k === "z" || k === "backspace") undo();
+  else if (k === "escape" && editIndex !== null) cancelEdit();
   else return;
   e.preventDefault();
 });
+
+// ---------------------------------------------------------------- historial: volver a un duelo y cambiarlo
+
+let editIndex = null;
+
+function setEditing(index) {
+  editIndex = index;
+  $("#editBar").hidden = index === null;
+  $("#progress").hidden = index !== null;
+  $("#tieBtn").classList.remove("chosen");
+  $("#undoBtn").disabled = index !== null || state.answers.length === 0;
+  if (index !== null) {
+    $("#editLabel").textContent = `duelo ${index + 1}`;
+    $("#chalk").textContent = "Elegí de nuevo. Después seguís desde donde te toca.";
+  }
+}
+
+function roundsNow() {
+  return Engine.roundsOf(Engine.plan(IDS, state), state.answers.length);
+}
+
+function openHistory() {
+  if (busy || !state.answers.length) return toast("Todavía no hay duelos");
+  const rounds = roundsNow();
+  const names = { 1: "Ronda 1 · Ordenar", 2: "Ronda 2 · Verificar", 3: "Ronda 3 · Dudas" };
+  const side = (id, cls) => {
+    const m = BY_ID.get(id);
+    return `<span class="hside ${cls}"><img src="${m.poster}" alt=""><span>${esc(m.title)}</span></span>`;
+  };
+  let html = "";
+  let lastRound = 0;
+  // del más nuevo al más viejo, agrupado por ronda
+  for (let i = state.answers.length - 1; i >= 0; i--) {
+    const [x, y, r] = state.answers[i];
+    if (rounds[i] !== lastRound) {
+      if (lastRound) html += `</div>`;
+      lastRound = rounds[i];
+      html += `<div class="hist-round r${lastRound}"><i></i>${names[lastRound]}</div><div class="hist-list">`;
+    }
+    const flip = sideFlip({ answered: i });
+    const [L, R] = flip ? [y, x] : [x, y];
+    const winner = r === 0 ? null : r > 0 ? x : y;
+    const cls = (id) => (winner === null ? "" : winner === id ? "won" : "lost");
+    html += `<button class="hrow" data-i="${i}" aria-label="Cambiar el duelo ${i + 1}">
+      <span class="n">${i + 1}</span>${side(L, cls(L))}<span class="mid ${r === 0 ? "tie" : ""}">${r === 0 ? "≈" : "vs"}</span>${side(R, cls(R) + " right")}</button>`;
+  }
+  html += `</div>`;
+  const h = $("#history");
+  h.innerHTML = `<div class="history-in">
+    <header class="history-head">
+      <div class="row1"><h2>Historial</h2><button class="btn small ghost" id="histClose">Cerrar</button></div>
+      <p>${state.answers.length} duelos. Tocá uno para cambiar tu elección; después seguís desde donde te toque.</p>
+    </header>${html}</div>`;
+  h.hidden = false;
+  h.scrollTop = 0;
+  document.body.style.overflow = "hidden";
+  $("#histClose").addEventListener("click", closeHistory);
+  h.querySelectorAll(".hrow").forEach((b) => b.addEventListener("click", () => {
+    closeHistory();
+    enterEdit(Number(b.dataset.i));
+  }));
+}
+
+function closeHistory() {
+  $("#history").hidden = true;
+  document.body.style.overflow = "";
+}
+
+function enterEdit(index) {
+  const [x, y, r] = state.answers[index];
+  if (screen !== "duel") {
+    show("duel");
+    keepAwake();
+  }
+  const flip = sideFlip({ answered: index });
+  cur = { x, y, L: flip ? y : x, R: flip ? x : y };
+  fillCard($("#pickL"), BY_ID.get(cur.L));
+  fillCard($("#pickR"), BY_ID.get(cur.R));
+  setEditing(index);
+  if (r === 0) $("#tieBtn").classList.add("chosen");
+  else $(r > 0 === (cur.L === x) ? "#pickL" : "#pickR").querySelector(".mine").hidden = false;
+  dealIn();
+}
+
+function cancelEdit() {
+  if (busy) return;
+  const p = Engine.plan(IDS, state);
+  if (p.phase === "done") {
+    setEditing(null);
+    return showFinal(p, false);
+  }
+  lastPhase = p.phase;
+  fillDuel(p);
+  dealIn();
+}
+
+async function applyEdit(side, r) {
+  const index = editIndex;
+  const L = $("#pickL");
+  const R = $("#pickR");
+  if (side === "T") { L.classList.add("tie"); R.classList.add("tie"); }
+  else { (side === "L" ? L : R).classList.add("win"); (side === "L" ? R : L).classList.add("lose"); }
+
+  let p;
+  let msg;
+  if (state.answers[index][2] === r) {
+    p = Engine.plan(IDS, state);
+    msg = "Sin cambios: era la misma elección";
+  } else {
+    const res = Engine.rewrite(IDS, state, index, r);
+    save();
+    p = res.plan;
+    const left = p.phase === "done" ? 0 : Engine.estimateTotal(p) - p.answered;
+    msg = p.phase === "done" ? "Cambiado · ranking actualizado" : res.reused ? `Cambiado · ${res.reused} respuestas reutilizadas` : "Cambiado";
+    if (p.phase !== "done" && left > 0) msg += ` · faltan ${left}`;
+  }
+  await wait(380);
+  $("#arena").classList.add("out");
+  await wait(250);
+  setEditing(null);
+  toast(msg);
+  if (p.phase === "done" && state.revealed) {
+    busy = false;
+    cur = null;
+    return showFinal(p, false);
+  }
+  lastPhase = p.phase;
+  proceed(p, true);
+}
 
 // ---------------------------------------------------------------- confeti (los puntitos del logo)
 
@@ -533,7 +670,7 @@ function showFinal(p, celebrate) {
       <button class="btn ghost" id="copyBtn">Copiar el ranking como texto</button>
       <button class="btn ghost" id="moreBtn">Hacer 10 duelos más de desempate</button>
       <button class="btn ghost" id="replayBtn">Ver la revelación otra vez</button>
-      <button class="btn ghost" id="undoLastBtn">Deshacer el último duelo</button>
+      <button class="btn ghost" id="histFinalBtn">Revisar o cambiar duelos</button>
       <button class="linkish" id="finalReset">Empezar de cero</button>
       <div id="finalConfirm" class="confirm" hidden>
         <span>¿Borrar todos los duelos y el ranking?</span>
@@ -566,7 +703,7 @@ function showFinal(p, celebrate) {
     proceed(np, true);
   });
   $("#replayBtn").addEventListener("click", () => playReveal(p).then(() => window.scrollTo(0, 0)));
-  $("#undoLastBtn").addEventListener("click", undo);
+  $("#histFinalBtn").addEventListener("click", openHistory);
   $("#finalReset").addEventListener("click", () => { $("#finalReset").hidden = true; $("#finalConfirm").hidden = false; });
   $("#finalResetNo").addEventListener("click", () => { $("#finalReset").hidden = false; $("#finalConfirm").hidden = true; });
   $("#finalResetYes").addEventListener("click", () => {
