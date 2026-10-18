@@ -1,0 +1,85 @@
+<title>Top 35 de Ale</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#22163a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Caveat:wght@600&family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+/*STYLES*/
+</style>
+
+<div id="app">
+  <!-- ============ INTRO ============ -->
+  <section id="intro" class="screen">
+    <div class="eyebrow">The One With Ale's Top 35</div>
+    <h1 class="logo" aria-label="Pelis">P<i></i>E<i></i>L<i></i>I<i></i>S</h1>
+    <div class="peephole-hero"><div class="frame"><img id="heroPoster" src="posters/05.jpg" alt=""></div></div>
+    <p class="hero-copy">35 películas, duelos de a dos y al final <em>tu ranking exacto</em>.</p>
+    <div class="rounds">
+      <div class="round"><span class="dot"></span><div><b>Ronda 1 · Ordenar</b><span>Cada respuesta descarta la mayor cantidad posible de órdenes</span></div><span class="n">~136</span></div>
+      <div class="round"><span class="dot"></span><div><b>Ronda 2 · Verificar</b><span>Cada puesto contra el que tiene justo abajo</span></div><span class="n">34</span></div>
+      <div class="round"><span class="dot"></span><div><b>Ronda 3 · Dudas</b><span>Empates y pares parejos, hasta llegar a 200</span></div><span class="n">~30</span></div>
+    </div>
+    <div class="howto">
+      <span>Tocá la que más te gustó</span><span>· Empate si no podés elegir</span><span>· Se guarda solo</span>
+    </div>
+    <div class="cta">
+      <button id="startBtn" class="btn">Empezar</button>
+      <button id="resetAsk" class="linkish" hidden>Empezar de cero</button>
+      <div id="resetConfirm" class="confirm" hidden>
+        <span>¿Borrar los duelos y arrancar de nuevo?</span>
+        <div><button id="resetYes" class="btn small">Sí, borrar</button><button id="resetNo" class="btn small ghost">Cancelar</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DUELO ============ -->
+  <section id="duel" class="screen" hidden>
+    <div class="topbar">
+      <span class="logo" aria-hidden="true">P<i></i>E<i></i>L<i></i>I<i></i>S</span>
+      <button id="undoBtn" class="undo" aria-label="Deshacer el último duelo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+        Deshacer
+      </button>
+    </div>
+    <div class="progress">
+      <div class="progress-row"><span id="roundLabel" class="round-label">Ronda 1 · Ordenar</span><span id="countLabel" class="count">Duelo 1 · faltan ~199</span></div>
+      <div class="bars"><div class="bar"><span id="bar1"></span></div><div class="bar"><span id="bar2"></span></div><div class="bar"><span id="bar3"></span></div></div>
+    </div>
+    <h2 class="question">¿Cuál te gustó más?</h2>
+    <div id="chalk" class="chalk"></div>
+    <div id="arena" class="arena">
+      <button class="pick" data-side="L" id="pickL">
+        <div class="poster"><img alt=""><span class="yr"></span></div>
+        <div class="ttl"></div>
+        <span class="heart">¡ESTA!</span>
+      </button>
+      <div class="vs" aria-hidden="true">vs</div>
+      <button class="pick" data-side="R" id="pickR">
+        <div class="poster"><img alt=""><span class="yr"></span></div>
+        <div class="ttl"></div>
+        <span class="heart">¡ESTA!</span>
+      </button>
+    </div>
+    <div class="tiebar">
+      <button id="tieBtn" class="tie-btn"><b>Empate</b><small>No puedo elegir</small></button>
+    </div>
+    <div class="keys">Teclado: ← izquierda · → derecha · ↓ empate · Z deshacer</div>
+  </section>
+
+  <!-- ============ RANKING FINAL ============ -->
+  <section id="final" class="screen" hidden></section>
+</div>
+
+<section id="titlecard" class="titlecard" hidden></section>
+<section id="reveal" hidden><button id="skipBtn" class="skip">Saltar</button><div id="stage" class="stage"></div></section>
+<section id="sheet" class="sheet" hidden></section>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+/*SCRIPTS*/
+</script>
