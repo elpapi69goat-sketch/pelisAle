@@ -59,6 +59,7 @@ async function handleFile(file) {
   $("#dropTitle").textContent = file.name;
   $("#dropSub").textContent = `${fmtSize(file.size)} · tocá para elegir otro`;
   showError("#err1", "");
+  $("#crashNote").hidden = true;
   for (const id of ["#step2", "#step3", "#scriptWrap", "#claudeNote"]) $(id).hidden = true;
 
   let decoded;
@@ -186,6 +187,7 @@ $("#runAsr").addEventListener("click", () => {
   $("#scriptWrap").hidden = false;
   keepAwake();
   asrWorker ||= new Worker("asr-worker.js", { type: "module" });
+  markRunning($("#model").value);
   const m = $("#asrMeter");
   meter(m, 0, "Preparando…", true);
   const t0 = performance.now();
@@ -203,7 +205,8 @@ $("#runAsr").addEventListener("click", () => {
     if (data.type === "error") finishAsr(data.message);
   };
   asrWorker.onerror = (e) => finishAsr(e.message || "error");
-  asrWorker.postMessage({ audio: state.pcm16k.slice(), language: $("#lang").value, model: $("#model").value });
+  const audio = state.pcm16k.slice();
+  asrWorker.postMessage({ audio, language: $("#lang").value, model: $("#model").value }, [audio.buffer]);
 });
 
 function addLine(seg) {
@@ -217,6 +220,7 @@ function addLine(seg) {
 
 function finishAsr(error) {
   state.asrBusy = false;
+  markRunning(null);
   $("#runAsr").disabled = false;
   releaseAwake();
   $("#asrMeter").hidden = true;
@@ -288,3 +292,20 @@ function releaseAwake() {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && state.asrBusy) keepAwake();
 });
+
+// Si Safari cierra la pestaña por falta de memoria, la página vuelve a cargar
+// sola. Lo detectamos al volver y pasamos a la calidad liviana.
+function markRunning(model) {
+  try {
+    if (model) sessionStorage.setItem("asr-running", model);
+    else sessionStorage.removeItem("asr-running");
+  } catch {}
+}
+(() => {
+  let crashed = null;
+  try { crashed = sessionStorage.getItem("asr-running"); } catch {}
+  if (!crashed) return;
+  markRunning(null);
+  $("#model").value = "onnx-community/whisper-base";
+  $("#crashNote").hidden = false;
+})();
