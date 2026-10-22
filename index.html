@@ -32,6 +32,7 @@
       <span class="drop-sub" id="dropSub">De la galería o de Archivos · MP4, MOV, y también audios</span>
     </label>
     <p class="err" id="err1" hidden></p>
+    <p class="err" id="crashNote" hidden>La página se reinició mientras sacaba el guión: el teléfono se quedó sin memoria. Volvé a elegir el video; ya dejé la calidad en "Rápida". Si vuelve a pasar, mandale el MP3 a Claude.</p>
   </section>
 
   <!-- 2 · audio -->
@@ -64,8 +65,8 @@
       <div class="field">
         <label for="model">Calidad</label>
         <select id="model">
-          <option value="onnx-community/whisper-base">Rápida (80 MB)</option>
-          <option value="onnx-community/whisper-small" selected>Buena (250 MB)</option>
+          <option value="onnx-community/whisper-base" selected>Rápida (80 MB)</option>
+          <option value="onnx-community/whisper-small">Mejor · solo compu (250 MB)</option>
         </select>
       </div>
       <button class="btn" id="runAsr">Sacar el guión</button>
