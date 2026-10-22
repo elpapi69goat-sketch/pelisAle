@@ -1,5 +1,5 @@
 // Prueba de punta a punta en un iPhone simulado:
-// PW=<ruta a playwright> node guionista/test/e2e.mjs <video> <dir_capturas> [modelo] [idioma]
+// PW=<ruta a playwright> [BASE=<url publicada>] node guionista/test/e2e.mjs <video> <dir_capturas> [modelo] [idioma]
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import { readFileSync, existsSync } from "node:fs";
@@ -22,7 +22,7 @@ const page = await (await browser.newContext({ ...devices["iPhone 14"] })).newPa
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
-await page.goto("http://localhost:4322/");
+await page.goto(process.env.BASE || "http://localhost:4322/");
 await page.screenshot({ path: join(OUT, "g1-inicio.png") });
 await page.setInputFiles("#file", video);
 await page.waitForSelector("#audioActions:not([hidden])", { timeout: 120000 });
